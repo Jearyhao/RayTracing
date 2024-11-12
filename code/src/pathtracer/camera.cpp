@@ -188,6 +188,27 @@ void Camera::load_settings(string filename) {
  * This function generates a ray from camera perspective, passing through camera / sensor plane (x,y)
  */
 Ray Camera::generate_ray(double x, double y) const {
+    // 将图像空间坐标转换到相机空间
+    double sensor_x = (2 * x - 1) * tan(radians(hFov) / 2);
+    double sensor_y = (2 * y - 1) * tan(radians(vFov) / 2);
+    Vector3D sensor_pos(sensor_x, sensor_y, -1);
+
+    // 在相机空间中生成射线
+    Vector3D ray_dir = sensor_pos;
+    ray_dir.normalize();
+
+    // 将射线转换到世界坐标系
+    Vector3D world_ray_dir = c2w * ray_dir;
+    world_ray_dir.normalize();
+
+    // 初始化光线
+    Ray ray(pos, world_ray_dir);
+    ray.min_t = nClip;
+    ray.max_t = fClip;
+
+    return ray;
+}
+/*Ray Camera::generate_ray(double x, double y) const {
 
   // TODO (Part 1.1):
   // compute position of the input sensor sample coordinate on the
@@ -198,6 +219,6 @@ Ray Camera::generate_ray(double x, double y) const {
 
   return Ray(pos, Vector3D(0, 0, -1));
 
-}
+}*/
 
 } // namespace CGL
