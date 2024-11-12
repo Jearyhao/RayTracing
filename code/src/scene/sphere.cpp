@@ -19,8 +19,76 @@ bool Sphere::test(const Ray &r, double &t1, double &t2) const {
   return true;
 
 }
+bool Sphere::has_intersection(const Ray& r) const {
+    Vector3D oc = r.o - o;
+    double a = dot(r.d, r.d);
+    double b = 2.0 * dot(oc, r.d);
+    double c = dot(oc, oc) - this->r * this->r;
+    double discriminant = b * b - 4 * a * c;
 
-bool Sphere::has_intersection(const Ray &r) const {
+    if (discriminant < 0) {
+        return false;
+    }
+    else {
+        double sqrt_discriminant = sqrt(discriminant);
+        double t1 = (-b - sqrt_discriminant) / (2.0 * a);
+        double t2 = (-b + sqrt_discriminant) / (2.0 * a);
+
+        if (t1 > t2) std::swap(t1, t2);
+
+        if (t1 >= r.min_t && t1 <= r.max_t) {
+            r.max_t = t1;
+            return true;
+        }
+
+        if (t2 >= r.min_t && t2 <= r.max_t) {
+            r.max_t = t2;
+            return true;
+        }
+
+        return false;
+    }
+}
+
+bool Sphere::intersect(const Ray& r, Intersection* i) const {
+    Vector3D oc = r.o - o;
+    double a = dot(r.d, r.d);
+    double b = 2.0 * dot(oc, r.d);
+    double c = dot(oc, oc) - this->r * this->r;
+    double discriminant = b * b - 4 * a * c;
+
+    if (discriminant < 0) {
+        return false;
+    }
+    else {
+        double sqrt_discriminant = sqrt(discriminant);
+        double t1 = (-b - sqrt_discriminant) / (2.0 * a);
+        double t2 = (-b + sqrt_discriminant) / (2.0 * a);
+
+        if (t1 > t2) std::swap(t1, t2);
+
+        if (t1 >= r.min_t && t1 <= r.max_t) {
+            r.max_t = t1;
+            i->t = t1;
+            i->primitive = this;
+            i->bsdf = get_bsdf();
+            i->n = (r.at_time(t1) - o).unit();
+            return true;
+        }
+
+        if (t2 >= r.min_t && t2 <= r.max_t) {
+            r.max_t = t2;
+            i->t = t2;
+            i->primitive = this;
+            i->bsdf = get_bsdf();
+            i->n = (r.at_time(t2) - o).unit();
+            return true;
+        }
+
+        return false;
+    }
+}
+/*bool Sphere::has_intersection(const Ray& r) const {
 
   // TODO (Part 1.4):
   // Implement ray - sphere intersection.
@@ -41,7 +109,7 @@ bool Sphere::intersect(const Ray &r, Intersection *i) const {
 
 
   return true;
-}
+}*/
 
 void Sphere::draw(const Color &c, float alpha) const {
   Misc::draw_sphere_opengl(o, r, c);
