@@ -20,73 +20,48 @@ bool Sphere::test(const Ray &r, double &t1, double &t2) const {
 
 }
 bool Sphere::has_intersection(const Ray& r) const {
-    Vector3D oc = r.o - o;
-    double a = dot(r.d, r.d);
-    double b = 2.0 * dot(oc, r.d);
-    double c = dot(oc, oc) - this->r * this->r;
-    double discriminant = b * b - 4 * a * c;
 
-    if (discriminant < 0) {
-        return false;
-    }
-    else {
-        double sqrt_discriminant = sqrt(discriminant);
-        double t1 = (-b - sqrt_discriminant) / (2.0 * a);
-        double t2 = (-b + sqrt_discriminant) / (2.0 * a);
-
-        if (t1 > t2) std::swap(t1, t2);
-
-        if (t1 >= r.min_t && t1 <= r.max_t) {
-            r.max_t = t1;
-            return true;
-        }
-
-        if (t2 >= r.min_t && t2 <= r.max_t) {
-            r.max_t = t2;
-            return true;
-        }
-
-        return false;
-    }
+	// TODO (Part 1.4):
+	// Implement ray - sphere intersection.
+	// Note that you might want to use the the Sphere::test helper here.
+	float a = dot(r.d, r.d);
+	if (a == 0) return false;
+	float b = dot(2 * (r.o - o), r.d);
+	float c = dot(r.o - o, r.o - 1) - r2;
+	float rad = b * b - 4 * a * c;
+	if (rad < 0) return false;
+	float t = (-b - sqrt(rad)) / (2 * a);
+	if (t < r.min_t) t = (-b + sqrt(rad)) / (2 * a);
+	return t > r.min_t && t < r.max_t;
 }
 
 bool Sphere::intersect(const Ray& r, Intersection* i) const {
-    Vector3D oc = r.o - o;
-    double a = dot(r.d, r.d);
-    double b = 2.0 * dot(oc, r.d);
-    double c = dot(oc, oc) - this->r * this->r;
-    double discriminant = b * b - 4 * a * c;
 
-    if (discriminant < 0) {
-        return false;
-    }
-    else {
-        double sqrt_discriminant = sqrt(discriminant);
-        double t1 = (-b - sqrt_discriminant) / (2.0 * a);
-        double t2 = (-b + sqrt_discriminant) / (2.0 * a);
-
-        if (t1 > t2) std::swap(t1, t2);
-
-        if (t1 >= r.min_t && t1 <= r.max_t) {
-            r.max_t = t1;
-            i->t = t1;
-            i->primitive = this;
-            i->bsdf = get_bsdf();
-            i->n = (r.at_time(t1) - o).unit();
-            return true;
-        }
-
-        if (t2 >= r.min_t && t2 <= r.max_t) {
-            r.max_t = t2;
-            i->t = t2;
-            i->primitive = this;
-            i->bsdf = get_bsdf();
-            i->n = (r.at_time(t2) - o).unit();
-            return true;
-        }
-
-        return false;
-    }
+	// TODO (Part 1.4):
+	// Implement ray - sphere intersection.
+	// Note again that you might want to use the the Sphere::test helper here.
+	// When an intersection takes place, the Intersection data should be updated
+	// correspondingly.
+	float a = dot(r.d, r.d);
+	if (a == 0) return false;
+	float b = dot(2 * (r.o - o), r.d);
+	float c = dot(r.o - o, r.o - o) - r2;
+	float rad = b * b - 4 * a * c;
+	if (rad < 0) return false;
+	float t = (-b - sqrt(rad)) / (2 * a);
+	if (t < r.min_t) {
+		t = (-b + sqrt(rad)) / (2 * a);
+	}
+	if (t < r.min_t || t > r.max_t) return false;
+	Vector3D point = r.o + r.d * t;
+	Vector3D normal = point - o;
+	normal.normalize();
+	r.max_t = t;
+	i->bsdf = get_bsdf();
+	i->primitive = this;
+	i->t = t;
+	i->n = normal;
+	return true;
 }
 /*bool Sphere::has_intersection(const Ray& r) const {
 

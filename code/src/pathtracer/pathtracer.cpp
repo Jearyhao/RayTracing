@@ -172,33 +172,48 @@ Vector3D PathTracer::est_radiance_global_illumination(const Ray &r) {
   return L_out;
 }
 void PathTracer::raytrace_pixel(size_t x, size_t y) {
-    // 获取总样本数
-    int num_samples = ns_aa;
-    Vector2D origin = Vector2D(x, y); // 像素的左下角
+    // TODO (Part 1.2):
+    // Make a loop that generates num_samples camera rays and traces them
+    // through the scene. Return the average Vector3D.
+    // You should call est_radiance_global_illumination in this function.
 
-    Vector3D radiance(0.0, 0.0, 0.0); // 初始化辐射度
+    // TODO (Part 5):
+    // Modify your implementation to include adaptive sampling.
+    // Use the command line parameters "samplesPerBatch" and "maxTolerance"
 
-    // 生成 num_samples 条射线并计算辐射度
-    for (int i = 0; i < num_samples; ++i) {
-        // 获取归一化的图像空间坐标
-        Vector2D sample = gridSampler->get_sample();
-        double u = (x + sample.x) / sampleBuffer.w;
-        double v = (y + sample.y) / sampleBuffer.h;
-
-        // 生成射线
-        Ray ray = camera->generate_ray(u, v);
-
-        // 估计辐射度
-        radiance += est_radiance_global_illumination(ray);
+    int num_samples = 0;          // total samples to evaluate
+    float s1 = 0;
+    float s2 = 0;
+    // x and y are bottom left corner of the pixel
+    Vector3D result;
+    float i = 0;
+    while (num_samples < ns_aa) {
+        num_samples = min(num_samples + samplesPerBatch, ns_aa);
+        while (i < num_samples) {
+            float xr = (float)rand() / RAND_MAX;
+            float yr = (float)rand() / RAND_MAX;
+            Ray r = camera->generate_ray(
+                ((float)x + xr) / sampleBuffer.w,
+                ((float)y + yr) / sampleBuffer.h);
+            r.depth = max_ray_depth;
+            Vector3D sample = est_radiance_global_illumination(r);
+            s1 += sample.illum();
+            s2 += sample.illum() * sample.illum();
+            result += sample;
+            i++;
+        }
+        float mean = s1 / i;
+        float stdev = sqrt((1.f / (i - 1.f)) * (s2 - s1 * s1 / i));
+        float I = 1.96f * stdev / sqrt(i);
+        if (I <= maxTolerance * mean) {
+            break;
+        }
     }
-
-    // 计算平均辐射度
-    radiance /= num_samples;
-
-    // 更新 sampleBuffer 中的像素值
-    sampleBuffer.update_pixel(radiance, x, y);
+    result /= i;
+    sampleBuffer.update_pixel(result, x, y);
     sampleCountBuffer[x + y * sampleBuffer.w] = num_samples;
 }
+
 /*void PathTracer::raytrace_pixel(size_t x, size_t y) {
   // TODO (Part 1.2):
   // Make a loop that generates num_samples camera rays and traces them

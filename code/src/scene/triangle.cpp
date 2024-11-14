@@ -22,82 +22,67 @@ Triangle::Triangle(const Mesh *mesh, size_t v1, size_t v2, size_t v3) {
 
 BBox Triangle::get_bbox() const { return bbox; }
 bool Triangle::has_intersection(const Ray& r) const {
-    // 使用 Möller-Trumbore 算法进行射线-三角形相交测试
-    const Vector3D edge1 = p2 - p1;
-    const Vector3D edge2 = p3 - p1;
-    const Vector3D h = cross(r.d, edge2);
-    const double a = dot(edge1, h);
-
-    if (a > -EPS_F && a < EPS_F) {
-        return false; // 射线与三角形平行
+    // Part 1, Task 3: implement ray-triangle intersection
+    // The difference between this function and the next function is that the next
+    // function records the "intersection" while this function only tests whether
+    // there is a intersection.
+    Vector3D ab = p1 - p2;
+    Vector3D bc = p2 - p3;
+    Vector3D ca = p3 - p1;
+    if (dot(cross(ab, bc), r.d) < 0) {
+        ab *= -1;
+        bc *= -1;
+        ca *= -1;
     }
-
-    const double f = 1.0 / a;
-    const Vector3D s = r.o - p1;
-    const double u = f * dot(s, h);
-
-    if (u < 0.0 || u > 1.0) {
-        return false; // 射线在三角形外部
-    }
-
-    const Vector3D q = cross(s, edge1);
-    const double v = f * dot(r.d, q);
-
-    if (v < 0.0 || u + v > 1.0) {
-        return false; // 射线在三角形外部
-    }
-
-    const double t = f * dot(edge2, q);
-
-    if (t > r.min_t && t < r.max_t) {
-        return true; // 射线与三角形相交
-    }
-
-    return false; // 射线与三角形不相交
+    Vector3D oa = p1 - r.o;
+    Vector3D ob = p2 - r.o;
+    Vector3D oc = p3 - r.o;
+    Vector3D n1 = cross(oa, ab);
+    Vector3D n2 = cross(ob, bc);
+    Vector3D n3 = cross(oc, ca);
+    return
+        dot(r.d, n1) <= 0
+        && dot(r.d, n2) <= 0
+        && dot(r.d, n3) <= 0;
 }
 
+float epsalon = 0.0001;
 bool Triangle::intersect(const Ray& r, Intersection* isect) const {
-    // 使用 Möller-Trumbore 算法进行射线-三角形相交测试
-    const Vector3D edge1 = p2 - p1;
-    const Vector3D edge2 = p3 - p1;
-    const Vector3D h = cross(r.d, edge2);
-    const double a = dot(edge1, h);
-
-    if (a > -EPS_F && a < EPS_F) {
-        return false; // 射线与三角形平行
-    }
-
-    const double f = 1.0 / a;
-    const Vector3D s = r.o - p1;
-    const double u = f * dot(s, h);
-
-    if (u < 0.0 || u > 1.0) {
-        return false; // 射线在三角形外部
-    }
-
-    const Vector3D q = cross(s, edge1);
-    const double v = f * dot(r.d, q);
-
-    if (v < 0.0 || u + v > 1.0) {
-        return false; // 射线在三角形外部
-    }
-
-    const double t = f * dot(edge2, q);
-
-    if (t > r.min_t && t < r.max_t) {
-        r.max_t = t; // 更新最近的交点
-
-        // 更新交点信息
+    // Part 1, Task 3:
+    // implement ray-triangle intersection. When an intersection takes
+    // place, the Intersection data should be updated accordingly
+    if (has_intersection(r)) {
+        Vector3D N = cross(p2 - p1, p3 - p1);
+        //N = (dot(N, r.d) < 0) ? -N : N;//Maybe flip normal
+        N.normalize();
+        float NdotD = dot(r.d, N);
+        //cout << 1 << endl;
+        if (abs(NdotD) < epsalon) return false;
+        //cout << 2 << endl;
+        float t = dot(p1 - r.o, N) / NdotD;
+        if (t < r.min_t || t > r.max_t) return false;
+        //cout << 3 << endl;
+        Vector3D p = r.o + r.d * t;
+        Vector3D ap = p - p1;
+        Vector3D bp = p - p2;
+        Vector3D cp = p - p3;
+        Vector3D ab = p2 - p1;
+        Vector3D bc = p3 - p2;
+        Vector3D ca = p1 - p3;
+        float gamma = cross(ap, ab).norm() / cross(bc, ab).norm();
+        float alpha = cross(bp, bc).norm() / cross(bc, ab).norm();
+        float beta = 1 - alpha - gamma;
+        Vector3D normal = alpha * n1 + beta * n2 + gamma * n3;
+        r.max_t = t;
         isect->t = t;
-        isect->n = (1 - u - v) * n1 + u * n2 + v * n3; // 使用重心坐标插值法线
-        isect->primitive = this;
         isect->bsdf = get_bsdf();
-
-        return true; // 射线与三角形相交
+        isect->n = normal;
+        isect->primitive = this;
+        return true;
     }
-
-    return false; // 射线与三角形不相交
+    return false;
 }
+
 
 /*bool Triangle::has_intersection(const Ray& r) const {
   // Part 1, Task 3: implement ray-triangle intersection
