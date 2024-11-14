@@ -36,6 +36,44 @@ void BVHAccel::draw(BVHNode *node, const Color &c, float alpha) const {
     draw(node->r, c, alpha);
   }
 }
+void split(const std::vector<Primitive*>::iterator& start,
+    const std::vector<Primitive*>::iterator& end,
+    std::vector<Primitive*>::iterator& middle) {
+    int size = end - start;
+    Vector3D center;
+    for (auto i = start; i != end; i++) {
+        center += (*i)->get_bbox().centroid();
+    }
+    center /= size;
+    int a = 0;
+    int b = 0;
+    int c = 0;
+    for (auto i = start; i != end; i++) {
+        Vector3D v = (*i)->get_bbox().centroid();
+        if (v[0] - center[0] > 0) a++;
+        if (v[1] - center[1] > 0) b++;
+        if (v[2] - center[2] > 0) c++;
+    }
+    int index = rand() % 3;
+    int mid = 0;
+    for (auto i = start; i != end; i++) {
+        Vector3D v = (*i)->get_bbox().centroid();
+        if (v[index] < center[index]) mid++;
+    }
+    middle = start + mid;
+    auto fast = start;
+    auto slow = start;
+    while (fast != end) {
+        if ((*fast)->get_bbox().centroid()[index] < center[index]) {
+            auto t = *slow;
+            *slow = *fast;
+            *fast = t;
+            slow++;
+        }
+        fast++;
+    }
+    if (middle == end || middle == start) middle = start + 1;
+}
 
 void BVHAccel::drawOutline(BVHNode *node, const Color &c, float alpha) const {
   if (node->isLeaf()) {
@@ -51,45 +89,35 @@ BVHNode* BVHAccel::construct_bvh(std::vector<Primitive*>::iterator start,
     std::vector<Primitive*>::iterator end,
     size_t max_leaf_size) {
 
-    // 计算当前图元集合的包围盒
-    BBox bbox;
-    for (auto p = start; p != end; p++) {
-        BBox bb = (*p)->get_bbox();
-        bbox.expand(bb);
-    }
+    // TODO (Part 2.1):
+    // Construct a BVH from the given vector of primitives and maximum leaf
+    // size configuration. The starter code build a BVH aggregate with a
+    // single leaf node (which is also the root) that encloses all the
+    // primitives.
 
-    // 创建一个新的 BVHNode 节点
-    BVHNode* node = new BVHNode(bbox);
-    node->start = start;
-    node->end = end;
-
-    // 如果图元数量小于或等于 max_leaf_size，则创建叶节点
-    size_t num_primitives = end - start;
-    if (num_primitives <= max_leaf_size) {
+    if (end - start <= max_leaf_size) {
+        BBox bbox;
+        for (auto p = start; p != end; p++) {
+            BBox bb = (*p)->get_bbox();
+            bbox.expand(bb);
+        }
+        BVHNode* node = new BVHNode(bbox);
+        node->start = start;
+        node->end = end;
         return node;
     }
-
-    // 选择一个轴和分割点，将图元分为左右两部分
-    int axis = 0; // 选择 x 轴
-    Vector3D centroid_sum;
-    for (auto p = start; p != end; p++) {
-        centroid_sum += (*p)->get_bbox().centroid();
+    else {
+        std::vector<Primitive*>::iterator middle;
+        split(start, end, middle);
+        BBox bbox;
+        BVHNode* node = new BVHNode(bbox);
+        node->l = construct_bvh(start, middle, max_leaf_size);
+        node->r = construct_bvh(middle, end, max_leaf_size);
+        bbox.expand(node->l->bb);
+        bbox.expand(node->r->bb);
+        node->bb = bbox;
+        return node;
     }
-    Vector3D centroid_avg = centroid_sum / num_primitives;
-    auto mid = std::partition(start, end, [axis, centroid_avg](Primitive* p) {
-        return p->get_bbox().centroid()[axis] < centroid_avg[axis];
-        });
-
-    // 如果分割失败（所有图元在同一边），则强制分割
-    if (mid == start || mid == end) {
-        mid = start + num_primitives / 2;
-    }
-
-    // 递归地构建左右子节点
-    node->l = construct_bvh(start, mid, max_leaf_size);
-    node->r = construct_bvh(mid, end, max_leaf_size);
-
-    return node;
 }
 /*BVHNode* BVHAccel::construct_bvh(std::vector<Primitive*>::iterator start,
                                  std::vector<Primitive *>::iterator end,
