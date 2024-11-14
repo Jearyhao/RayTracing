@@ -7,7 +7,49 @@
 
 namespace CGL {
 
-bool BBox::intersect(const Ray& r, double& t0, double& t1) const {
+    bool BBox::intersect(const Ray& r, double& t0, double& t1) const {
+
+        // 初始化 tmin 和 tmax
+        double tmin = (min.x - r.o.x) / r.d.x;
+        double tmax = (max.x - r.o.x) / r.d.x;
+
+        if (tmin > tmax) std::swap(tmin, tmax);
+
+        double tymin = (min.y - r.o.y) / r.d.y;
+        double tymax = (max.y - r.o.y) / r.d.y;
+
+        if (tymin > tymax) std::swap(tymin, tymax);
+
+        if ((tmin > tymax) || (tymin > tmax))
+            return false;
+
+        if (tymin > tmin)
+            tmin = tymin;
+
+        if (tymax < tmax)
+            tmax = tymax;
+
+        double tzmin = (min.z - r.o.z) / r.d.z;
+        double tzmax = (max.z - r.o.z) / r.d.z;
+
+        if (tzmin > tzmax) std::swap(tzmin, tzmax);
+
+        if ((tmin > tzmax) || (tzmin > tmax))
+            return false;
+
+        if (tzmin > tmin)
+            tmin = tzmin;
+
+        if (tzmax < tmax)
+            tmax = tzmax;
+
+        // 更新 t0 和 t1
+        t0 = tmin;
+        t1 = tmax;
+
+        return true;
+    }
+/*bool BBox::intersect(const Ray& r, double& t0, double& t1) const {
 
   // TODO (Part 2.2):
   // Implement ray - bounding box intersection test
@@ -17,7 +59,7 @@ bool BBox::intersect(const Ray& r, double& t0, double& t1) const {
 
   return true;
 
-}
+}*/
 
 void BBox::draw(Color c, float alpha) const {
 
