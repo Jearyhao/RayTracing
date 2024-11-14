@@ -47,8 +47,51 @@ void BVHAccel::drawOutline(BVHNode *node, const Color &c, float alpha) const {
     drawOutline(node->r, c, alpha);
   }
 }
+BVHNode* BVHAccel::construct_bvh(std::vector<Primitive*>::iterator start,
+    std::vector<Primitive*>::iterator end,
+    size_t max_leaf_size) {
 
-BVHNode *BVHAccel::construct_bvh(std::vector<Primitive *>::iterator start,
+    // 计算当前图元集合的包围盒
+    BBox bbox;
+    for (auto p = start; p != end; p++) {
+        BBox bb = (*p)->get_bbox();
+        bbox.expand(bb);
+    }
+
+    // 创建一个新的 BVHNode 节点
+    BVHNode* node = new BVHNode(bbox);
+    node->start = start;
+    node->end = end;
+
+    // 如果图元数量小于或等于 max_leaf_size，则创建叶节点
+    size_t num_primitives = end - start;
+    if (num_primitives <= max_leaf_size) {
+        return node;
+    }
+
+    // 选择一个轴和分割点，将图元分为左右两部分
+    int axis = 0; // 选择 x 轴
+    Vector3D centroid_sum;
+    for (auto p = start; p != end; p++) {
+        centroid_sum += (*p)->get_bbox().centroid();
+    }
+    Vector3D centroid_avg = centroid_sum / num_primitives;
+    auto mid = std::partition(start, end, [axis, centroid_avg](Primitive* p) {
+        return p->get_bbox().centroid()[axis] < centroid_avg[axis];
+        });
+
+    // 如果分割失败（所有图元在同一边），则强制分割
+    if (mid == start || mid == end) {
+        mid = start + num_primitives / 2;
+    }
+
+    // 递归地构建左右子节点
+    node->l = construct_bvh(start, mid, max_leaf_size);
+    node->r = construct_bvh(mid, end, max_leaf_size);
+
+    return node;
+}
+/*BVHNode* BVHAccel::construct_bvh(std::vector<Primitive*>::iterator start,
                                  std::vector<Primitive *>::iterator end,
                                  size_t max_leaf_size) {
 
@@ -73,7 +116,7 @@ BVHNode *BVHAccel::construct_bvh(std::vector<Primitive *>::iterator start,
   return node;
 
 
-}
+}*/
 
 bool BVHAccel::has_intersection(const Ray &ray, BVHNode *node) const {
   // TODO (Part 2.3):
