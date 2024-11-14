@@ -7,48 +7,66 @@
 
 namespace CGL {
 
-    bool BBox::intersect(const Ray& r, double& t0, double& t1) const {
+	bool BBox::intersect(const Ray& r, double& t0, double& t1) const {
 
-        // 初始化 tmin 和 tmax
-        double tmin = (min.x - r.o.x) / r.d.x;
-        double tmax = (max.x - r.o.x) / r.d.x;
-
-        if (tmin > tmax) std::swap(tmin, tmax);
-
-        double tymin = (min.y - r.o.y) / r.d.y;
-        double tymax = (max.y - r.o.y) / r.d.y;
-
-        if (tymin > tymax) std::swap(tymin, tymax);
-
-        if ((tmin > tymax) || (tymin > tmax))
-            return false;
-
-        if (tymin > tmin)
-            tmin = tymin;
-
-        if (tymax < tmax)
-            tmax = tymax;
-
-        double tzmin = (min.z - r.o.z) / r.d.z;
-        double tzmax = (max.z - r.o.z) / r.d.z;
-
-        if (tzmin > tzmax) std::swap(tzmin, tzmax);
-
-        if ((tmin > tzmax) || (tzmin > tmax))
-            return false;
-
-        if (tzmin > tmin)
-            tmin = tzmin;
-
-        if (tzmax < tmax)
-            tmax = tzmax;
-
-        // 更新 t0 和 t1
-        t0 = tmin;
-        t1 = tmax;
-
-        return true;
-    }
+		// TODO (Part 2.2):
+		// Implement ray - bounding box intersection test
+		// If the ray intersected the bouding box within the range given by
+		// t0, t1, update t0 and t1 with the new intersection times.
+		float x1, x2, y1, y2, z1, z2;
+		if (r.d[0] == 0) {
+			x1 = std::numeric_limits<float>::min();
+			x2 = std::numeric_limits<float>::max();
+		}
+		else {
+			x1 = (min[0] - r.o[0]) / r.d[0];
+			x2 = (max[0] - r.o[0]) / r.d[0];
+		}
+		if (r.d[1] == 0) {
+			y1 = std::numeric_limits<float>::min();
+			y2 = std::numeric_limits<float>::max();
+		}
+		else {
+			y1 = (min[1] - r.o[1]) / r.d[1];
+			y2 = (max[1] - r.o[1]) / r.d[1];
+		}
+		if (r.d[2] == 0) {
+			z1 = std::numeric_limits<float>::min();
+			z2 = std::numeric_limits<float>::max();
+		}
+		else {
+			z1 = (min[2] - r.o[2]) / r.d[2];
+			z2 = (max[2] - r.o[2]) / r.d[2];
+		}
+		if (r.d[0] < 0) {
+			float temp = x1;
+			x1 = x2;
+			x2 = temp;
+		}
+		if (r.d[1] < 0) {
+			float temp = y1;
+			y1 = y2;
+			y2 = temp;
+		}
+		if (r.d[2] < 0) {
+			float temp = z1;
+			z1 = z2;
+			z2 = temp;
+		}
+		float time0 = std::max(x1, std::max(y1, z1));
+		float time1 = std::min(x2, std::min(y2, z2));
+		if (time0 > time1 || time1 < 0) {
+			return false;
+		}
+		if (time0 < 0) {
+			t0 = 0.f;
+			t1 = time1;
+			return true;
+		}
+		t0 = time0;
+		t1 = time1;
+		return true;
+	}
 /*bool BBox::intersect(const Ray& r, double& t0, double& t1) const {
 
   // TODO (Part 2.2):

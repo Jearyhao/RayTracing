@@ -145,8 +145,66 @@ BVHNode* BVHAccel::construct_bvh(std::vector<Primitive*>::iterator start,
 
 
 }*/
+bool BVHAccel::has_intersection(const Ray& ray, BVHNode* node) const {
+    // TODO (Part 2.3):
+    // Fill in the intersect function.
+    // Take note that this function has a short-circuit that the
+    // Intersection version cannot, since it returns as soon as it finds
+    // a hit, it doesn't actually have to find the closest hit.
+    double t0;
+    double t1;
+    if (!node->bb.intersect(ray, t0, t1)) return false;
+    if (node->isLeaf()) {
+        for (auto p = node->start; p != node->end; p++) {
+            total_isects++;
+            if ((*p)->has_intersection(ray)) return true;
+        }
+        return false;
+    }
+    else {
+        return has_intersection(ray, node->l)
+            || has_intersection(ray, node->r);
+    }
 
-bool BVHAccel::has_intersection(const Ray &ray, BVHNode *node) const {
+}
+
+bool BVHAccel::intersect(const Ray& ray, Intersection* i, BVHNode* node) const {
+    // TODO (Part 2.3):
+    // Fill in the intersect function.
+    double t0;
+    double t1;
+    if (!node->bb.intersect(ray, t0, t1)
+        || t1 < ray.min_t
+        || t0 > ray.max_t) return false;
+    if (node->isLeaf()) {
+        bool hit = false;
+        for (auto p = node->start; p != node->end; p++) {
+            total_isects++;
+            if ((*p)->intersect(ray, i)) hit = true;
+            /*Vector3D min = node->bb.min;
+            Vector3D max = node->bb.max;
+            Vector3D c = (*p)->get_bbox().centroid();
+            if (c[0] < min[0] || c[0] > max[0]) {
+                cout << "a" << endl;
+            }
+            if (c[1] < min[1] || c[1] > max[1]) {
+                cout << "b" << endl;
+            }
+            if (c[2] < min[2] || c[2] > max[2]) {
+                cout << "c" << endl;
+            }
+            cout << 1 << endl;*/
+        }
+        //cout << "hit is " << hit << endl;
+        return hit;
+    }
+    else {
+        bool left = intersect(ray, i, node->l);
+        bool right = intersect(ray, i, node->r);
+        return left || right;
+    }
+}
+/*bool BVHAccel::has_intersection(const Ray& ray, BVHNode* node) const {
   // TODO (Part 2.3):
   // Fill in the intersect function.
   // Take note that this function has a short-circuit that the
@@ -179,7 +237,7 @@ bool BVHAccel::intersect(const Ray &ray, Intersection *i, BVHNode *node) const {
   return hit;
 
 
-}
+}*/
 
 } // namespace SceneObjects
 } // namespace CGL
